@@ -69,9 +69,13 @@ const Search = () => {
     setLoading(true);
     setIsAiMode(false);
     try {
-      // Backend expects a query string for moniker/skills search
+      const meRes = await api.get('/users/me');
+      const currentUserEmail = meRes.data.email;
+      
       const res = await api.get(`/matches/search?query=${encodeURIComponent(searchQuery)}`);
-      setUsers(res.data);
+      // Filter out the current user by email
+      const filtered = res.data.filter(u => u.email !== currentUserEmail);
+      setUsers(filtered);
     } catch (err) {
       console.error('Error searching:', err);
     } finally {

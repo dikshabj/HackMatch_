@@ -10,6 +10,10 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
+import OrganizerDashboard from './pages/OrganizerDashboard';
+import CreateHackathon from './pages/CreateHackathon';
+import Hackathons from './pages/Hackathons';
+import HackathonDetails from './pages/HackathonDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
@@ -64,9 +68,27 @@ const AppContent = () => {
               </ProtectedRoute>
             } />
             
+            <Route path="/organizer/dashboard" element={
+              <ProtectedRoute requiredRole="ROLE_ORGANIZER">
+                <OrganizerDashboard />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/hackathons/create" element={
+              <ProtectedRoute requiredRole="ROLE_ORGANIZER">
+                <CreateHackathon />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/hackathons/:id" element={
+              <ProtectedRoute>
+                <HackathonDetails />
+              </ProtectedRoute>
+            } />
+
             <Route path="/hackathons" element={
               <ProtectedRoute>
-                <div className="pt-32 text-center text-4xl">Hackathons Page Coming Soon...</div>
+                <Hackathons />
               </ProtectedRoute>
             } />
           </Routes>

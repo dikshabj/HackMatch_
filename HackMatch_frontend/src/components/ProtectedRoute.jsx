@@ -1,15 +1,24 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children }) => {
+// Generic protected route — just needs login
+const ProtectedRoute = ({ children, requiredRole }) => {
   const token = localStorage.getItem('token');
-  
+  const { user } = useAuth();
+
   if (!token) {
-    // If there is no token, redirect to login page
     return <Navigate to="/login" replace />;
   }
 
-  // If token exists, render the component
+  // If a specific role is required, wait for user to load then check
+  if (requiredRole && user) {
+    const hasRole = user.roles?.some((r) => r.name === requiredRole);
+    if (!hasRole) {
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
   return children;
 };
 

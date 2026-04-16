@@ -14,6 +14,10 @@ const Navbar = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
+  // Role helpers
+  const isOrganizer = user?.roles?.some((r) => r.name === 'ROLE_ORGANIZER');
+  const dashboardPath = isOrganizer ? '/organizer/dashboard' : '/dashboard';
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -31,10 +35,10 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Find Team', path: '/search', icon: Search },
-    { name: 'Comms', path: '/messages', icon: MessageSquare },
-    { name: 'Events', path: '/hackathons', icon: Trophy },
+    { name: 'Dashboard', path: dashboardPath, icon: LayoutDashboard, matchPaths: ['/dashboard', '/organizer/dashboard'] },
+    { name: 'Find Team', path: '/search', icon: Search, matchPaths: ['/search'] },
+    { name: 'Comms', path: '/messages', icon: MessageSquare, matchPaths: ['/messages'] },
+    { name: 'Events', path: '/hackathons', icon: Trophy, matchPaths: ['/hackathons'] },
   ];
 
   const handleLogout = () => {
@@ -76,7 +80,9 @@ const Navbar = () => {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => {
-              const isActive = location.pathname === link.path;
+              const isActive = link.matchPaths
+                ? link.matchPaths.some((p) => location.pathname.startsWith(p))
+                : location.pathname === link.path;
               return (
                 <Link
                   key={link.name}
