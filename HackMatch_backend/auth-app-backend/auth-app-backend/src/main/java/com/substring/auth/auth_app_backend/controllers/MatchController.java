@@ -19,9 +19,9 @@ public class MatchController {
 
     @GetMapping("/search")
     public ResponseEntity<List<UserDto>> searchTeammates(
-        @RequestParam Set<String> skills
+        @RequestParam String query
     ){
-        return ResponseEntity.ok(userService.findTeammatesBySkills(skills));
+        return ResponseEntity.ok(userService.findTeammatesBySkills(query));
     }
 
         // Is method ko MatchController mein add karein:

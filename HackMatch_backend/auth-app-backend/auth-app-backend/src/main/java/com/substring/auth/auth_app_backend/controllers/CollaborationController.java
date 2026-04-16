@@ -31,6 +31,16 @@ public class CollaborationController {
         return ResponseEntity.ok(collaborationService.getReceivedRequests(principal.getName()));
     }
 
+    @GetMapping("/sent")
+    public ResponseEntity<List<CollaborationRequestDto>> getSentRequests(Principal principal) {
+        return ResponseEntity.ok(collaborationService.getSentRequests(principal.getName()));
+    }
+
+    @GetMapping("/accepted")
+    public ResponseEntity<List<CollaborationRequestDto>> getAcceptedConnections(Principal principal) {
+        return ResponseEntity.ok(collaborationService.getAcceptedConnections(principal.getName()));
+    }
+
     @PutMapping("/{requestId}/{status}")
     public ResponseEntity<CollaborationRequestDto> updateStatus(
             @PathVariable String requestId,

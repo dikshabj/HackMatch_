@@ -84,6 +84,15 @@ public class User implements UserDetails {
     private String githubLink;
     private String linkedinLink;
 
+    // New fields for enhanced matching
+    private String experienceLevel; // Junior, Intermediate, Senior
+    private String preferredRole;  // Frontend, Backend, Fullstack, UI/UX
+    
+    @Builder.Default
+    private boolean available = true;
+    
+    private String portfolioLink;
+
 
 
 }

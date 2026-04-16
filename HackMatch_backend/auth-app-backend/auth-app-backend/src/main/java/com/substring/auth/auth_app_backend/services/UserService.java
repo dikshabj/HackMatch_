@@ -10,7 +10,7 @@ public interface UserService {
 
   UserDto getUserByEmail(String email);
 
-  // get user by email id
+  // update user
   UserDto updateUser(UserDto userDto, String userId);
 
   void deleteUser(String userId);
@@ -21,6 +21,5 @@ public interface UserService {
 
   List<UserDto> getSuggestedTeammates(String currentUserEmail);
 
-  List<UserDto> findTeammatesBySkills(Set<String> skills);
-
+  List<UserDto> findTeammatesBySkills(String query);
 }

@@ -9,6 +9,7 @@ import com.substring.auth.auth_app_backend.helpers.UserHelper;
 import com.substring.auth.auth_app_backend.repositories.RoleRepository;
 import com.substring.auth.auth_app_backend.repositories.UserRepository;
 import com.substring.auth.auth_app_backend.services.AIService;
+import com.substring.auth.auth_app_backend.services.MatchService;
 import com.substring.auth.auth_app_backend.services.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class UserServiceImpel implements UserService {
 
     private final RoleRepository roleRepository;
     private final AIService aiService;
+    private final MatchService matchService;
 
 
 
@@ -123,8 +125,8 @@ public class UserServiceImpel implements UserService {
     }
 
     @Override
-    public List<UserDto> findTeammatesBySkills(Set<String> skills){
-        return userRepository.findBySkillsIn(skills)
+    public List<UserDto> findTeammatesBySkills(String query){
+        return userRepository.findBySkillsOrName(query)
                 .stream()
                 .map(user -> modelMapper.map(user , UserDto.class))
                 .toList();
@@ -146,7 +148,17 @@ public class UserServiceImpel implements UserService {
                 .toList();
 
         // 3. AI se ranking karwa kar return karein! ✅
-        return aiService.rankTeammatesWithAI(currentUserDto, candidates);
+        List<UserDto> ranked = aiService.rankTeammatesWithAI(currentUserDto, candidates);
+        
+        // 4. Match reasons add karein
+        ranked.forEach(dto -> {
+            User other = userRepository.findById(dto.getId()).orElse(null);
+            if (other != null) {
+                dto.setMatchReason(matchService.getMatchReason(currentUser, other));
+            }
+        });
+        
+        return ranked;
     }
 
 
