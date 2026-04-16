@@ -7,20 +7,37 @@ import Signup from './pages/Signup';
 import Search from './pages/Search';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import Messages from './pages/Messages';
+import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
+import { Toaster } from 'react-hot-toast';
 
-function App() {
+const AppContent = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="w-12 h-12 rounded-full border-t-2 border-maroon animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
-    <Router>
-      <div className="min-h-screen">
+    <SocketProvider userId={user?.id}>
+      <Toaster position="top-right" reverseOrder={false} />
+      <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-maroon/30">
         <Navbar />
-        <main>
+        <main className="relative z-10">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
@@ -31,9 +48,9 @@ function App() {
                 <Search />
               </ProtectedRoute>
             } />
-            <Route path="/hackathons" element={
+            <Route path="/messages" element={
               <ProtectedRoute>
-                <div className="pt-32 text-center text-4xl">Hackathons Page Coming Soon...</div>
+                <Messages />
               </ProtectedRoute>
             } />
             <Route path="/profile" element={
@@ -41,10 +58,31 @@ function App() {
                 <Profile />
               </ProtectedRoute>
             } />
+            <Route path="/notifications" element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/hackathons" element={
+              <ProtectedRoute>
+                <div className="pt-32 text-center text-4xl">Hackathons Page Coming Soon...</div>
+              </ProtectedRoute>
+            } />
           </Routes>
         </main>
       </div>
-    </Router>
+    </SocketProvider>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   );
 }
 

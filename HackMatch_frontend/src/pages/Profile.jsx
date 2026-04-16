@@ -1,20 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { motion as FramerMotion } from 'framer-motion';
-import { User, Save, Code, Globe, Link as LinkIcon, Plus, X, Edit3, Mail, Terminal, ExternalLink } from 'lucide-react';
+import { 
+  User as UserIcon, 
+  Save, 
+  Code, 
+  Globe, 
+  Link as LinkIcon, 
+  Plus, 
+  X, 
+  Edit3, 
+  Mail, 
+  Terminal, 
+  ExternalLink,
+  Camera,
+  Briefcase,
+  CheckCircle2,
+  Circle,
+  Github as GithubIcon,
+  Linkedin as LinkedinIcon,
+  Zap
+} from 'lucide-react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 const Profile = () => {
+  const { fetchUser } = useAuth();
   const navigate = useNavigate();
-  // Store the WHOLE user object to avoid missing fields on PUT
+  const fileInputRef = useRef(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [skillInput, setSkillInput] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     fetchProfile();
@@ -26,13 +46,44 @@ const Profile = () => {
       setUserData(res.data);
     } catch (err) {
       console.error('Failed to load profile:', err);
-      setError('Communication with secure server failed. Please re-login.');
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
         navigate('/login');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        toast.error("Only image files are accepted for neural visualization.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploading(true);
+    const loadingToast = toast.loading("Syncing profile visual to S3 uplink...");
+    
+    try {
+      const res = await api.post('/users/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setUserData({ ...userData, image: res.data.imageUrl });
+      await fetchUser();
+      toast.success("Profile visual successfully synchronized.", { id: loadingToast });
+    } catch (err) {
+      console.error('Upload failed:', err);
+      toast.error("Uplink failed. Network interference detected.", { id: loadingToast });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -44,27 +95,19 @@ const Profile = () => {
     }
   };
 
-  const handleRemoveSkill = (skillToRemove) => {
-    setUserData({
-      ...userData,
-      skills: userData.skills.filter(skill => skill !== skillToRemove)
-    });
-  };
-
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setSuccessMsg('');
     try {
-      // Use the id directly from the fetched object
       await api.put(`/users/${userData.id}`, userData);
-      setSuccessMsg('Identity Matrix Updated Successfully.');
-      await fetchProfile(); // Refresh data
+      toast.success('Identity Matrix Re-calibrated.', {
+        style: { background: '#1e293b', color: '#fff' }
+      });
       setIsEditing(false);
-      setTimeout(() => setSuccessMsg(''), 3000);
+      await fetchProfile();
     } catch (err) {
-      console.error('Failed to update profile:', err);
-      alert('Failed to save profile updates. Technical error in transmission.');
+      console.error('Save failed:', err);
+      toast.error('Identity preservation failed. Local memory only.');
     } finally {
       setSaving(false);
     }
@@ -72,205 +115,319 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-28 flex items-center justify-center">
-        <div className="animate-pulse w-16 h-16 rounded-full bg-maroon/20 border border-maroon/40" />
-      </div>
-    );
-  }
-
-  if (error || !userData) {
-    return (
-      <div className="min-h-screen pt-28 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 rounded-full bg-maroon/10 border border-maroon/20 flex items-center justify-center mb-6">
-            <X className="text-maroon" size={40} />
+      <div className="min-h-screen pt-28 flex items-center justify-center bg-[#0a0a0a]">
+        <div className="animate-pulse w-20 h-20 rounded-full bg-maroon/20 border-2 border-maroon/40 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full border-t-2 border-maroon animate-spin"></div>
         </div>
-        <h2 className="text-2xl font-black uppercase mb-4 tracking-tighter text-white">Transmission Failed</h2>
-        <p className="text-gray-500 font-inter mb-8 max-w-sm">{error || "User identity matrix could not be resolved."}</p>
-        <button 
-            onClick={() => navigate('/login')}
-            className="px-10 py-3 bg-maroon text-white rounded-xl font-space font-bold text-xs uppercase tracking-widest shadow-neon"
-        >
-            RE-AUTHENTICATE
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-28 pb-20 px-6 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-1/4 right-0 w-[400px] h-[400px] bg-maroon/10 blur-[150px] rounded-full -z-10" />
+    <div className="min-h-screen pt-28 pb-20 px-4 md:px-6 relative overflow-hidden bg-[#0a0a0a]">
+      {/* Dynamic Background */}
+      <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-maroon/10 blur-[150px] rounded-full -z-10 animate-pulse" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-red-900/5 blur-[150px] rounded-full -z-10" />
       
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">
-              {isEditing ? "Configure" : "Identity"} <span className="text-maroon">Matrix</span>
+      <div className="max-w-5xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+            <h1 className="text-5xl font-black mb-3 uppercase tracking-tighter leading-tight">
+              {isEditing ? "Modify" : "Identity"} <span className="text-maroon">Matrix</span>
             </h1>
-            <p className="text-gray-400 font-inter text-sm">
-                {isEditing ? "Recalibrate your system parameters." : "Your operative status in the network."}
-            </p>
-          </div>
+            <div className="flex items-center gap-3">
+                <div className="h-[2px] w-12 bg-maroon" />
+                <p className="text-gray-500 font-space text-[10px] uppercase tracking-[0.2em]">
+                    {isEditing ? "Adjusting Operative Parameters" : "Neural ID Status: Authenticated"}
+                </p>
+            </div>
+          </motion.div>
           
           {!isEditing && (
-            <FramerMotion.button
-              whileHover={{ scale: 1.05 }}
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsEditing(true)}
-              className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl font-space font-bold text-xs text-white flex items-center gap-2 hover:bg-white/10 transition-all hover:border-maroon/50 shadow-neon"
+              className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-space font-bold text-xs text-white flex items-center gap-3 hover:bg-white/10 transition-all hover:border-maroon shadow-2xl backdrop-blur-md"
             >
-              <Edit3 size={14} className="text-maroon" /> EDIT PROFILE
-            </FramerMotion.button>
+              <Edit3 size={16} className="text-maroon" /> CALIBRATE PROFILE
+            </motion.button>
           )}
         </div>
 
-        <FramerMotion.div layout transition={{ duration: 0.4 }}>
-          {successMsg && (
-            <FramerMotion.div 
-               initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-               className="mb-6 p-3 bg-green-900/30 border border-green-500/30 rounded-xl text-green-400 text-center text-xs font-space font-bold tracking-widest uppercase"
-            >
-              {successMsg}
-            </FramerMotion.div>
-          )}
-
-          {!isEditing ? (
-            /* VIEW MODE */
-            <FramerMotion.div
-              key="view"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="glass-card p-8 border-maroon/20"
-            >
-                <div className="flex flex-col md:flex-row gap-8 items-start mb-10">
-                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-maroon to-black p-1 shadow-neon flex-shrink-0">
-                    <div className="w-full h-full bg-[#0a0a0a] rounded-[14px] flex items-center justify-center">
-                      <span className="text-4xl font-orbitron font-bold text-white uppercase">{userData.name?.charAt(0)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-black text-white mb-1 uppercase tracking-tight">{userData.name}</h2>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 font-inter mb-4">
-                        <span className="flex items-center gap-1"><Mail size={12} className="text-maroon" /> {userData.email}</span>
-                        <span className="flex items-center gap-1"><Terminal size={12} className="text-maroon" /> Rank 1</span>
-                    </div>
-                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-gray-400 text-sm italic font-inter">
-                        "{userData.bio || "No transmission decoded."}"
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-10 pt-8 border-t border-white/5">
-                    <div>
-                        <h3 className="text-xs font-space font-bold uppercase tracking-widest text-maroon mb-4">Specializations</h3>
-                        <div className="flex flex-wrap gap-2">
-                             {userData.skills?.length > 0 ? userData.skills.map(s => (
-                                <span key={s} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-white font-space uppercase">{s}</span>
-                             )) : <span className="text-gray-600 text-xs italic">N/A</span>}
+        <div className="grid lg:grid-cols-3 gap-8 items-start">
+            {/* Left Column: Visual ID & Role */}
+            <div className="lg:col-span-1 space-y-8">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="glass-card p-8 border-white/5 bg-white/[0.02] backdrop-blur-3xl text-center relative"
+                >
+                    <div className="relative inline-block group mb-6">
+                        <div className="w-40 h-40 rounded-3xl overflow-hidden border-2 border-white/10 group-hover:border-maroon transition-colors shadow-2xl mx-auto bg-gradient-to-br from-white/5 to-white/[0.02]">
+                            {userData.image ? (
+                                <img src={userData.image} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-maroon/20">
+                                    <UserIcon size={60} className="text-maroon/40" />
+                                </div>
+                            )}
+                            {isEditing && (
+                                <button 
+                                    onClick={() => fileInputRef.current.click()}
+                                    className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <Camera className="text-white mb-2" size={24} />
+                                    <span className="text-[10px] font-space font-bold uppercase text-white">Update Visual</span>
+                                </button>
+                            )}
                         </div>
-                    </div>
-                    <div>
-                        <h3 className="text-xs font-space font-bold uppercase tracking-widest text-maroon mb-4">Portals</h3>
-                        <div className="flex gap-4">
-                             {userData.githubLink && (
-                                <a href={userData.githubLink} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-maroon/50 transition-all text-gray-400 hover:text-white">
-                                    <GithubIcon size={18} />
-                                </a>
-                             )}
-                             {userData.linkedinLink && (
-                                <a href={userData.linkedinLink} target="_blank" rel="noreferrer" className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-maroon/50 transition-all text-gray-400 hover:text-white">
-                                    <LinkedinIcon size={18} />
-                                </a>
-                             )}
-                             {!userData.githubLink && !userData.linkedinLink && <span className="text-gray-600 text-xs italic">No links established.</span>}
-                        </div>
-                    </div>
-                </div>
-            </FramerMotion.div>
-          ) : (
-            /* EDIT MODE */
-            <FramerMotion.div
-              key="edit"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="glass-card p-8 border-maroon/20"
-            >
-              <form onSubmit={handleSave} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">Full Name</label>
-                        <input
-                            type="text" value={userData.name}
-                            onChange={(e) => setUserData({...userData, name: e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-inter text-sm outline-none focus:border-maroon/50"
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleImageUpload} 
+                            className="hidden" 
+                            accept="image/*"
                         />
                     </div>
-                    <div className="space-y-2 opacity-50">
-                        <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">Email (Fixed)</label>
-                        <input type="email" value={userData.email} readOnly className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-white font-inter text-sm cursor-not-allowed" />
+                    
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-1">{userData.name}</h2>
+                    <p className="text-maroon font-space text-[10px] font-bold uppercase tracking-widest mb-6">
+                        {userData.preferredRole || "Undefined Class"}
+                    </p>
+
+                    <div className="space-y-4 pt-6 border-t border-white/5">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500 font-space uppercase">Rank</span>
+                            <span className="text-white font-bold">{userData.experienceLevel || "Operative"}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500 font-space uppercase">Availability</span>
+                            <span className={`font-bold flex items-center gap-2 ${userData.available ? 'text-green-500' : 'text-red-500'}`}>
+                                {userData.available ? <CheckCircle2 size={12} /> : <Circle size={10} />}
+                                {userData.available ? "Ready" : "Busy"}
+                            </span>
+                        </div>
+                    </div>
+                </motion.div>
+
+                <div className="glass-card p-6 border-white/5 bg-white/[0.01] backdrop-blur-2xl">
+                    <h3 className="text-[10px] font-space font-bold text-maroon uppercase tracking-[0.2em] mb-4">Neural Reach</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <a href={userData.githubLink} target="_blank" className="flex items-center gap-2 text-xs text-gray-400 font-inter hover:text-white transition-colors p-3 bg-white/5 rounded-xl border border-white/5">
+                            <GithubIcon size={14} /> GitHub
+                        </a>
+                        <a href={userData.linkedinLink} target="_blank" className="flex items-center gap-2 text-xs text-gray-400 font-inter hover:text-white transition-colors p-3 bg-white/5 rounded-xl border border-white/5">
+                            <LinkedinIcon size={14} /> LinkedIn
+                        </a>
+                        {userData.portfolioLink && (
+                            <a href={userData.portfolioLink} target="_blank" className="col-span-2 flex items-center justify-center gap-2 text-xs text-white font-space font-bold uppercase tracking-widest hover:bg-maroon transition-all p-3 bg-maroon/20 rounded-xl border border-maroon/30 shadow-neon">
+                                <ExternalLink size={14} /> Open Portfolio
+                            </a>
+                        )}
                     </div>
                 </div>
+            </div>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">Bio</label>
-                    <textarea
-                        value={userData.bio} onChange={(e) => setUserData({...userData, bio: e.target.value})}
-                        className="w-full h-24 bg-white/5 border border-white/10 rounded-xl p-4 text-white font-inter text-sm outline-none focus:border-maroon/50 resize-none"
-                    />
-                </div>
-
-                <div className="space-y-4">
-                    <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">Skills Matrix</label>
-                    <div className="flex gap-2">
-                        <input
-                            type="text" value={skillInput} onChange={(e) => setSkillInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddSkill(e)}
-                            placeholder="Add specialization..."
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-inter text-sm outline-none focus:border-maroon/50"
-                        />
-                        <button type="button" onClick={handleAddSkill} className="px-4 bg-maroon text-white rounded-xl shadow-neon"><Plus size={20} /></button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {userData.skills.map(s => (
-                            <div key={s} className="px-3 py-1 bg-maroon/10 border border-maroon/30 rounded-lg flex items-center gap-2">
-                                <span className="text-[10px] font-space font-bold uppercase text-white">{s}</span>
-                                <button type="button" onClick={() => handleRemoveSkill(s)} className="text-maroon"><X size={10} /></button>
+            {/* Right Column: Parameters & Intel */}
+            <div className="lg:col-span-2 space-y-8">
+                <AnimatePresence mode="wait">
+                    {!isEditing ? (
+                        <motion.div 
+                            key="view"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="space-y-8"
+                        >
+                            <div className="glass-card p-8 border-white/5 bg-white/[0.02]">
+                                <h3 className="text-[10px] font-space font-bold text-maroon uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                                    <Terminal size={14} /> Operational Bio
+                                </h3>
+                                <div className="relative">
+                                    <div className="absolute -left-4 top-0 bottom-0 w-[2px] bg-maroon/30" />
+                                    <p className="text-gray-300 font-inter text-lg leading-relaxed italic pl-4">
+                                        "{userData.bio || "Data corrupted or not provided."}"
+                                    </p>
+                                </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-6 pt-4">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">GitHub</label>
-                        <input type="url" value={userData.githubLink} onChange={(e) => setUserData({...userData, githubLink: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-maroon/50" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">LinkedIn</label>
-                        <input type="url" value={userData.linkedinLink} onChange={(e) => setUserData({...userData, linkedinLink: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-maroon/50" />
-                    </div>
-                </div>
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <div className="glass-card p-8 border-white/5 bg-white/[0.02]">
+                                    <h3 className="text-[10px] font-space font-bold text-maroon uppercase tracking-[0.2em] mb-6">Expertise Stack</h3>
+                                    <div className="flex flex-wrap gap-3">
+                                        {userData.skills?.map(skill => (
+                                            <span key={skill} className="px-5 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] text-white font-space font-bold uppercase tracking-widest shadow-xl">
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="glass-card p-8 border-white/5 bg-white/[0.02]">
+                                    <h3 className="text-[10px] font-space font-bold text-maroon uppercase tracking-[0.2em] mb-6">Active Parameters</h3>
+                                    <div className="space-y-4 font-inter text-sm">
+                                        <div className="flex items-center gap-4 text-gray-400">
+                                            <Briefcase size={16} className="text-maroon" />
+                                            <span>Preferred: <b className="text-white">{userData.preferredRole}</b></span>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-gray-400">
+                                            <Zap size={16} className="text-maroon" />
+                                            <span>Linkability: <b className="text-white">{userData.available ? "Accepting Incoming Sessions" : "Encryption Mode Only"}</b></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div 
+                            key="edit"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                        >
+                            <form onSubmit={handleSave} className="glass-card p-10 border-maroon/20 bg-white/[0.03] space-y-10">
+                                <section>
+                                    <h3 className="text-[10px] font-space font-bold text-maroon uppercase tracking-[0.2em] mb-6 border-b border-maroon/20 pb-2">Core Identity</h3>
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">Public Moniker</label>
+                                            <input 
+                                                type="text" 
+                                                value={userData.name} 
+                                                onChange={e => setUserData({...userData, name: e.target.value})}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-inter text-sm focus:border-maroon focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500 font-bold">Class / Role</label>
+                                            <select 
+                                                value={userData.preferredRole} 
+                                                onChange={e => setUserData({...userData, preferredRole: e.target.value})}
+                                                className="w-full bg-[#0d0d0d] border border-white/10 rounded-2xl p-4 text-white font-inter text-sm focus:border-maroon focus:outline-none transition-all"
+                                            >
+                                                <option value="">Select Specialization</option>
+                                                <option value="Frontend">Frontend Development</option>
+                                                <option value="Backend">Backend Architecture</option>
+                                                <option value="Fullstack">Fullstack Operator</option>
+                                                <option value="UI/UX">UX Visualization</option>
+                                                <option value="Machine Learning">Pattern Recognition / ML</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </section>
 
-                <div className="pt-8 border-t border-white/10 flex justify-end gap-4">
-                    <button type="button" onClick={() => setIsEditing(false)} className="px-6 py-3 text-xs font-space font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors">Cancel</button>
-                    <button type="submit" disabled={saving} className="px-10 py-3 bg-maroon text-white rounded-xl font-space font-bold text-xs uppercase tracking-widest shadow-neon flex items-center gap-2">
-                        <Save size={16} /> {saving ? "Saving..." : "Initialize Save"}
-                    </button>
-                </div>
-              </form>
-            </FramerMotion.div>
-          )}
-        </FramerMotion.div>
+                                <section>
+                                    <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500 mb-3 block">Neural Encryption (Bio)</label>
+                                    <textarea 
+                                        value={userData.bio} 
+                                        onChange={e => setUserData({...userData, bio: e.target.value})}
+                                        placeholder="Describe your operational capability..."
+                                        className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-inter text-sm focus:border-maroon focus:outline-none transition-all resize-none"
+                                    />
+                                </section>
+
+                                <section>
+                                    <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500 mb-3 block">Neural Expertise (Skills)</label>
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                        {userData.skills?.map(skill => (
+                                            <span key={skill} className="px-4 py-2 rounded-xl bg-maroon/20 border border-maroon/40 text-[10px] text-white font-space font-bold uppercase tracking-widest flex items-center gap-2">
+                                                {skill}
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setUserData({ ...userData, skills: userData.skills.filter(s => s !== skill) })}
+                                                    className="hover:text-red-500 transition-colors"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <input 
+                                            type="text" 
+                                            value={skillInput}
+                                            onChange={e => setSkillInput(e.target.value)}
+                                            placeholder="Add new capability (e.g. React, Python, AI)"
+                                            className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-inter text-sm focus:border-maroon focus:outline-none transition-all font-space uppercase"
+                                            onKeyPress={e => {
+                                                if(e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddSkill(e);
+                                                }
+                                            }}
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={handleAddSkill}
+                                            className="px-6 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center hover:bg-maroon hover:border-maroon transition-all group"
+                                        >
+                                            <Plus size={20} className="text-maroon group-hover:text-white" />
+                                        </button>
+                                    </div>
+                                </section>
+
+                                <section className="grid md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">Rank (XP Level)</label>
+                                        <select 
+                                            value={userData.experienceLevel} 
+                                            onChange={e => setUserData({...userData, experienceLevel: e.target.value})}
+                                            className="w-full bg-[#0d0d0d] border border-white/10 rounded-2xl p-4 text-white font-inter text-sm focus:border-maroon focus:outline-none transition-all"
+                                        >
+                                            <option value="Intern">Intern / Rookie</option>
+                                            <option value="Junior">Junior Operative</option>
+                                            <option value="Intermediate">Mid-Level Operator</option>
+                                            <option value="Senior">Senior Specialist</option>
+                                            <option value="Lead">Lead Architect</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500">Collaboration Mode</label>
+                                        <div className="flex gap-4">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setUserData({...userData, available: true})}
+                                                className={`flex-1 p-4 rounded-2xl border transition-all text-[10px] font-space font-bold uppercase ${userData.available ? 'bg-maroon/20 border-maroon text-white shadow-neon' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                                            >
+                                                Open Session
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setUserData({...userData, available: false})}
+                                                className={`flex-1 p-4 rounded-2xl border transition-all text-[10px] font-space font-bold uppercase ${!userData.available ? 'bg-white/10 border-white/30 text-white' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                                            >
+                                                Encrypted
+                                            </button>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div className="flex justify-end gap-6 pt-6 border-t border-white/10">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsEditing(false)}
+                                        className="text-[10px] font-space font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
+                                    >
+                                        Abort Change
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        disabled={saving}
+                                        className="px-10 py-4 bg-maroon text-white rounded-2xl font-space font-bold text-xs uppercase tracking-widest shadow-neon hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                                    >
+                                        <Save size={18} /> {saving ? "PRESERVING..." : "COMMIT TO MATRIX"}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </div>
       </div>
     </div>
   );
 };
-
-// Icons with stability for old lucide versions
-const GithubIcon = ({ size }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-);
-const LinkedinIcon = ({ size }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
-);
 
 export default Profile;

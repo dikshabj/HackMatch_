@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Trophy, User, LogOut, LayoutDashboard, Menu, X, Bell } from 'lucide-react';
+import { Search, Trophy, User, LogOut, LayoutDashboard, Menu, X, Bell, MessageSquare } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -13,14 +17,24 @@ const Navbar = () => {
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
+    if (token) fetchUnreadCount();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [token, location.pathname]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await api.get('/notifications/unread-count');
+      setUnreadCount(res.data);
+    } catch (err) {
+      console.error('Error fetching unread count:', err);
+    }
+  };
 
   const navLinks = [
-    { name: 'Home', path: '/', icon: LayoutDashboard },
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Find Teammates', path: '/search', icon: Search },
-    { name: 'Hackathons', path: '/hackathons', icon: Trophy },
+    { name: 'Find Team', path: '/search', icon: Search },
+    { name: 'Comms', path: '/messages', icon: MessageSquare },
+    { name: 'Events', path: '/hackathons', icon: Trophy },
   ];
 
   const handleLogout = () => {
@@ -94,17 +108,32 @@ const Navbar = () => {
 
             <Link
               to="/profile"
-              className={`p-2 rounded-full border border-maroon/20 hover:border-maroon/60 transition-all duration-300 group ${
-                location.pathname === '/profile' ? 'bg-maroon/20' : 'bg-transparent'
+              className={`w-9 h-9 rounded-xl border border-maroon/20 hover:border-maroon/60 transition-all duration-300 group overflow-hidden ${
+                location.pathname === '/profile' ? 'bg-maroon/20 border-maroon' : 'bg-transparent'
               }`}
             >
-              <User size={18} className="text-maroon group-hover:text-white transition-colors" />
+              {user?.image ? (
+                <img src={user.image} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <User size={18} className="text-maroon group-hover:text-white transition-colors" />
+                </div>
+              )}
             </Link>
 
-            <button className="relative p-2 rounded-full border border-maroon/20 hover:border-maroon/60 transition-all duration-300 group ml-2">
+            <Link 
+              to="/notifications"
+              className={`relative p-2 rounded-full border border-maroon/20 hover:border-maroon/60 transition-all duration-300 group ml-2 ${
+                location.pathname === '/notifications' ? 'bg-maroon/20' : 'bg-transparent'
+              }`}
+            >
               <Bell size={18} className="text-maroon group-hover:text-white transition-colors" />
-              <div className="absolute top-2 right-2 w-2 h-2 bg-maroon rounded-full border border-black" />
-            </button>
+              {unreadCount > 0 && (
+                <div className="absolute top-0 right-0 min-w-[18px] h-[18px] bg-maroon rounded-full border border-black flex items-center justify-center -translate-y-1/3 translate-x-1/3">
+                  <span className="text-[10px] font-bold text-white px-1">{unreadCount}</span>
+                </div>
+              )}
+            </Link>
 
             <button 
               onClick={handleLogout}

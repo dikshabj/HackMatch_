@@ -21,13 +21,20 @@ const Dashboard = () => {
 
   const fetchUserData = async () => {
     try {
-      const res = await api.get('/users/me');
-      setUser(res.data);
-      // Placeholder for actual stats fetching
+      const [meRes, receivedRes, acceptedRes] = await Promise.all([
+        api.get('/users/me'),
+        api.get('/requests/received'),
+        api.get('/requests/accepted')
+      ]);
+      
+      setUser(meRes.data);
+      const pendingCount = receivedRes.data.filter(r => r.status === 'PENDING').length;
+      const connectionsCount = acceptedRes.data.length;
+
       setStats({
-        connections: res.data.skills?.length || 0, // Mocking some data
-        activeProjects: 2,
-        hackathons: 1
+        connections: connectionsCount,
+        activeProjects: meRes.data.skills?.length || 0,
+        pendingRequests: pendingCount
       });
     } catch (err) {
       console.error("Failed to load dashboard data", err);
@@ -92,23 +99,24 @@ const Dashboard = () => {
         {/* Stats Grid */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           {[
-            { label: "Connections", value: stats.connections, icon: Users },
-            { label: "AI Match Score", value: "98%", icon: Target },
-            { label: "Pending Requests", value: "3", icon: MessageSquare }
+            { label: "Connections", value: stats.connections, icon: Users, path: "/messages" },
+            { label: "AI Match Score", value: "98%", icon: Target, path: "/search" },
+            { label: "Pending Requests", value: stats.pendingRequests, icon: MessageSquare, path: "/notifications" }
           ].map((stat, idx) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="glass-card p-6 border-white/5 bg-white/[0.03] backdrop-blur-xl"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-space font-bold text-gray-400 uppercase tracking-widest">{stat.label}</span>
-                <stat.icon size={18} className="text-maroon" />
-              </div>
-              <div className="text-3xl font-black text-white">{stat.value}</div>
-            </motion.div>
+            <Link key={stat.label} to={stat.path || '#'}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="glass-card p-6 border-white/5 bg-white/[0.03] backdrop-blur-xl hover:border-maroon/30 transition-all cursor-pointer"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-space font-bold text-gray-400 uppercase tracking-widest">{stat.label}</span>
+                  <stat.icon size={18} className="text-maroon" />
+                </div>
+                <div className="text-3xl font-black text-white">{stat.value}</div>
+              </motion.div>
+            </Link>
           ))}
         </div>
 

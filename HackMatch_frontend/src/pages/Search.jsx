@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search as SearchIcon, UserPlus, Cpu, Zap, Code, Shield } from 'lucide-react';
+import { Search as SearchIcon, UserPlus, Cpu, Zap, Code, Shield, CheckCircle2 } from 'lucide-react';
 import api from '../services/api';
 import ProfileAlert from '../components/ProfileAlert';
+import toast from 'react-hot-toast';
 
 const Search = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [sentRequests, setSentRequests] = useState(new Set());
+  const [showProfileAlert, setShowProfileAlert] = useState(false);
+  const [connectingId, setConnectingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAiMode, setIsAiMode] = useState(true);
-  const [connectingId, setConnectingId] = useState(null);
-  const [showProfileAlert, setShowProfileAlert] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     checkProfileState();
@@ -24,9 +26,23 @@ const Search = () => {
         setShowProfileAlert(true);
       } else {
         fetchSuggestions();
+        fetchSentRequests();
       }
     } catch (err) {
       console.error('Failed to check user profile:', err);
+    }
+  };
+
+  const fetchSentRequests = async () => {
+    try {
+      const res = await api.get('/requests/sent');
+      // Only store IDs of requests that are NOT rejected
+      const sentIds = res.data
+        .filter(req => req.status?.toString().toUpperCase() !== 'REJECTED')
+        .map(req => req.receiver.id);
+      setSentRequests(new Set(sentIds));
+    } catch (err) {
+      console.error('Error fetching sent requests:', err);
     }
   };
 
@@ -53,8 +69,8 @@ const Search = () => {
     setLoading(true);
     setIsAiMode(false);
     try {
-      // Backend expects skills as a request param
-      const res = await api.get(`/matches/search?skills=${encodeURIComponent(searchQuery)}`);
+      // Backend expects a query string for moniker/skills search
+      const res = await api.get(`/matches/search?query=${encodeURIComponent(searchQuery)}`);
       setUsers(res.data);
     } catch (err) {
       console.error('Error searching:', err);
@@ -67,10 +83,21 @@ const Search = () => {
     setConnectingId(userId);
     try {
       await api.post(`/requests/send/${userId}`, { message: "Hi! I'd like to connect on HackMatch." });
-      alert('Connection request sent!');
+      setSentRequests(prev => new Set(prev).add(userId));
+      toast.success('Connection Request Sent!', {
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(128, 0, 0, 0.3)',
+        },
+        iconTheme: {
+          primary: '#800000',
+          secondary: '#fff',
+        },
+      });
     } catch (err) {
       console.error('Error connecting:', err);
-      alert('Failed to send request.');
+      toast.error('Could not transmit request.');
     } finally {
       setConnectingId(null);
     }
@@ -195,6 +222,19 @@ const Search = () => {
                   </p>
                 </div>
 
+                {isAiMode && user.matchReason && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-5 p-3 rounded-xl bg-maroon/5 border border-maroon/20 flex gap-3"
+                    >
+                        <Zap size={16} className="text-maroon shrink-0 mt-0.5" />
+                        <p className="text-[10px] font-space font-bold uppercase tracking-tight text-white/80 leading-tight">
+                            Neural Link Logic: <span className="text-maroon/80">{user.matchReason}</span>
+                        </p>
+                    </motion.div>
+                )}
+
                 <div className="flex flex-wrap gap-2 mb-6 relative z-10">
                   {user.skills && user.skills.length > 0 ? (
                     user.skills.slice(0, 4).map(skill => (
@@ -214,11 +254,19 @@ const Search = () => {
 
                 <button
                   onClick={() => handleConnect(user.id)}
-                  disabled={connectingId === user.id}
-                  className="w-full py-3.5 rounded-xl border border-white/10 font-space font-bold text-xs tracking-widest text-white uppercase group-hover:bg-maroon group-hover:border-maroon transition-all duration-300 relative z-10 flex items-center justify-center gap-2 disabled:opacity-50"
+                  disabled={connectingId === user.id || sentRequests.has(user.id)}
+                  className={`w-full py-3.5 rounded-xl border border-white/10 font-space font-bold text-xs tracking-widest text-white uppercase transition-all duration-300 relative z-10 flex items-center justify-center gap-2 disabled:opacity-50 ${
+                    sentRequests.has(user.id) ? 'bg-green-600/20 border-green-600/50 text-green-400' : 'group-hover:bg-maroon group-hover:border-maroon'
+                  }`}
                 >
-                  {connectingId === user.id ? 'Establishing Link...' : 'Connect'}
-                  <UserPlus size={14} className={connectingId === user.id ? 'animate-pulse' : ''} />
+                  {connectingId === user.id 
+                    ? 'Establishing Link...' 
+                    : sentRequests.has(user.id) 
+                      ? 'Awaiting Operator Response' 
+                      : 'Connect'
+                  }
+                  {!sentRequests.has(user.id) && <UserPlus size={14} className={connectingId === user.id ? 'animate-pulse' : ''} />}
+                  {sentRequests.has(user.id) && <CheckCircle2 size={14} />}
                 </button>
               </motion.div>
             ))
