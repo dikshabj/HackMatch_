@@ -14,12 +14,18 @@ public class RoleSeeder {
     @Bean
     public CommandLineRunner initRoles(RoleRepository roleRepository) {
         return args -> {
-            if (roleRepository.findByName(Role.STUDENT).isEmpty()) {
-                Role studentRole = new Role();
-                studentRole.setName(Role.STUDENT);
-                roleRepository.save(studentRole);
-                System.out.println("Seeded default role: " + Role.STUDENT);
-            }
+            seedRole(roleRepository, Role.STUDENT);
+            seedRole(roleRepository, Role.ORGANIZER);
+            seedRole(roleRepository, Role.SPONSOR);
         };
+    }
+
+    private void seedRole(RoleRepository repo, String roleName) {
+        if (repo.findByName(roleName).isEmpty()) {
+            Role role = new Role();
+            role.setName(roleName);
+            repo.save(role);
+            System.out.println("Seeded role: " + roleName);
+        }
     }
 }

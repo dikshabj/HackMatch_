@@ -50,12 +50,14 @@ public class UserServiceImpel implements UserService {
         User user = modelMapper.map(userDto, User.class);
 
         //ROLE ASSIGN FOR NEW USER
-        if(userDto.getRoles() == null || userDto.getRoles().isEmpty()){
-            Role studentRole = roleRepository.findByName("ROLE_STUDENT")
-            .orElseThrow(()-> new ResourceNotFound("Default Role not Found!"));
+        // Check if frontend ne koi specific role bheja hai (e.g., ROLE_ORGANIZER)
+        boolean wantsOrganizer = userDto.getRoles() != null &&
+            userDto.getRoles().stream().anyMatch(r -> "ROLE_ORGANIZER".equals(r.getName()));
 
-            user.setRoles(Set.of(studentRole));
-        }
+        String roleName = wantsOrganizer ? "ROLE_ORGANIZER" : "ROLE_STUDENT";
+        Role assignedRole = roleRepository.findByName(roleName)
+            .orElseThrow(() -> new ResourceNotFound("Role not found: " + roleName));
+        user.setRoles(Set.of(assignedRole));
 
         user.setProvider(userDto.getProvider()!= null ? userDto.getProvider(): Provider.LOCAL);
         //role assign to new user for authorization

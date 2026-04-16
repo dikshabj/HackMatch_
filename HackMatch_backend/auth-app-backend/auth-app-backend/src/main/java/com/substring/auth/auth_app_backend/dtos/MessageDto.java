@@ -18,4 +18,5 @@ public class MessageDto {
     private String content;
     private Instant timestamp;
     private boolean isRead;
+
 }
