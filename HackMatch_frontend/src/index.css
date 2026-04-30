@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-space: "Space Grotesk", sans-serif;
+  --font-inter: "Inter", sans-serif;
+  --font-orbitron: "Orbitron", sans-serif;
+
+  --color-maroon-light: #a52a2a;
+  --color-maroon: #800000;
+  --color-maroon-dark: #5a0000;
+  --color-maroon-glow: rgba(128, 0, 0, 0.4);
+
+  --shadow-neon: 0 0 10px rgba(128, 0, 0, 0.5), 0 0 20px rgba(128, 0, 0, 0.3);
+  --shadow-neon-hover: 0 0 15px rgba(128, 0, 0, 0.8), 0 0 30px rgba(128, 0, 0, 0.5);
+}
+
+@layer base {
+  body {
+    background: radial-gradient(circle at top right, rgba(128, 0, 0, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at bottom left, rgba(128, 0, 0, 0.1) 0%, transparent 40%),
+                #000000;
+    @apply font-inter text-gray-200 antialiased overflow-x-hidden min-h-screen;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-space tracking-tight text-white;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-black/40 backdrop-blur-md border border-white/10 rounded-xl;
+  }
+  
+  .btn-maroon {
+    @apply px-6 py-2 bg-maroon text-white font-orbitron rounded-lg transition-all duration-300 hover:shadow-neon hover:bg-maroon-dark;
+  }
+
+  .nav-link {
+    @apply text-gray-400 hover:text-white transition-all duration-200 font-orbitron text-sm uppercase tracking-widest;
+  }
+}
+
+/* Custom scrollbar for futuristic look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #800000;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a52a2a;
+}

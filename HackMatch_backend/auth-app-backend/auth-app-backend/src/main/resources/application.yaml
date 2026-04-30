@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: auth-app-backend
+    #we can control all our files of yml through this main file
+  profiles:
+    active: dev
+
+server :
+  port : ${PORT:8080}
+
+
+
+
+#we will do all the configurations here
+#database configurations
+
+
+#email configuration
+
+
+#oauth2 configurations
